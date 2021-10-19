@@ -1,4 +1,5 @@
 const { expect } = require("chai");
+const { BN, constants, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const P2PLoan = artifacts.require("P2PLoan");
 
 contract("P2PLoan", async function(accounts) {
@@ -65,11 +66,11 @@ contract("P2PLoan", async function(accounts) {
 
             const tx = await instance.createLoanOffer(asset1, asset2, 80, 50, 1, { from: user1 });
 
-            const event = tx.logs[0];
-            expect(event.event).to.equal("LoanOfferCreated");
-            expect(event.args.offerId.toNumber()).to.equal(offerId);
-            expect(event.args.lender).to.equal(user1);
-            expect(event.args.collateral).to.equal(asset1);
+            expectEvent(tx, "LoanOfferCreated", {
+                offerId: new BN(offerId),
+                lender: user1,
+                collateral: asset1
+            });
         });
 
         it("should return offer id", async function() {
@@ -81,4 +82,45 @@ contract("P2PLoan", async function(accounts) {
         });
 
     });
+
+
+    describe("Revoke offer", async function() {
+        let offerId;
+
+        beforeEach(async function() {
+            const tx = await instance.createLoanOffer(asset1, asset2, 80, 50, 1, { from: user1 });
+            offerId = tx.logs[0].args.offerId;
+        });
+
+
+        it("should fail when sender is not offeror", async function() {
+            await expectRevert(
+                instance.revokeLoanOffer(offerId, { from: user2 }),
+                "Sender is not a loan offeror"
+            );
+        });
+
+        it("should delete offer data", async function() {
+            await instance.revokeLoanOffer(offerId, { from: user1 });
+
+            const offer = await instance.offers(offerId);
+            expect(offer.collateral).to.equal(constants.ZERO_ADDRESS);
+            expect(offer.credit).to.equal(constants.ZERO_ADDRESS);
+            expect(offer.creditAmount.toNumber()).to.equal(0);
+            expect(offer.creditToBePaidAmount.toNumber()).to.equal(0);
+            expect(offer.duration.toNumber()).to.equal(0);
+            expect(offer.lender).to.equal(constants.ZERO_ADDRESS);
+        });
+
+        it("should emit `LoanOfferRevoked` event", async function() {
+            const tx = await instance.revokeLoanOffer(offerId, { from: user1 });
+
+            expectEvent(tx, "LoanOfferRevoked", {
+                offerId: offerId,
+                lender: user1
+            });
+        });
+
+    });
+
 });

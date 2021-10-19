@@ -34,7 +34,7 @@ contract P2PLoan is ERC721, Ownable {
 	mapping(uint256 => Loan) public loans;
 
 	event LoanOfferCreated(uint256 offerId, address indexed lender, address indexed collateral);
-	event LoanOfferRevoked();
+	event LoanOfferRevoked(uint256 offerId, address indexed lender);
 	event LoanAccepted();
 	event LoanPaidBack();
 
@@ -69,13 +69,15 @@ contract P2PLoan is ERC721, Ownable {
 		return offerId;
 	}
 
-	function revokeLoanOffer(uint256 _loanOfferId) external {
-		// 1. check if sender is loan offer creator
-		// 2. delete loan offer data
-		// 3. emit `LoanOfferRevoked` event
+	function revokeLoanOffer(uint256 _offerId) external {
+		require(offers[_offerId].lender == msg.sender, "Sender is not a loan offeror");
+
+		delete offers[_offerId];
+
+		emit LoanOfferRevoked(_offerId, msg.sender);
 	}
 
-	function acceptLoanOffer(uint256 _loanOfferId) external returns(uint256) {
+	function acceptLoanOffer(uint256 _offerId) external returns(uint256) {
 		// 1. check that sender is loan offer collateral owner
 		// 2. mint loan token for lender
 		// 3. update loan data
