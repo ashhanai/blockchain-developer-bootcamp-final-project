@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/ashhanai/blockchain-developer-bootcamp-final-project#readme",
   "devDependencies": {
-    "@openzeppelin/contracts": "4.3.2"
+    "@openzeppelin/contracts": "4.3.2",
+    "chai": "^4.3.4"
   }
 }

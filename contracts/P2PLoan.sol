@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 contract P2PLoan is ERC721, Ownable {
 
+	uint256 public offerId;
+	
 	struct LoanOffer {
 		uint256 id;
 		address collateral; // ERC721 address
@@ -13,6 +15,7 @@ contract P2PLoan is ERC721, Ownable {
 		uint256 creditAmount;
 		uint256 creditToBePaidAmount;
 		uint256 duration;
+		address lender;
 	}
 
 	enum LoanState {
@@ -28,10 +31,9 @@ contract P2PLoan is ERC721, Ownable {
 	}
 
 	mapping(uint256 => LoanOffer) public offers;
-	mapping(address => uint256) public offerOwner;
 	mapping(uint256 => Loan) public loans;
 
-	event LoanOfferCreated();
+	event LoanOfferCreated(uint256 offerId, address indexed lender, address indexed collateral);
 	event LoanOfferRevoked();
 	event LoanAccepted();
 	event LoanPaidBack();
@@ -48,9 +50,23 @@ contract P2PLoan is ERC721, Ownable {
 		uint256 _creditToBePaidAmount,
 		uint256 _duration
 	) external returns(uint256) {
-		// 1. create & save LoanOffer struct
-		// 2. emit `LoanOfferCreated` event
-		// 3. return loan offer id
+		offerId += 1;
+
+		LoanOffer memory offer = LoanOffer(
+			offerId,
+			_collateral,
+			_credit,
+			_creditAmount,
+			_creditToBePaidAmount,
+			_duration,
+			msg.sender
+		);
+
+		offers[offerId] = offer;
+
+		emit LoanOfferCreated(offerId, msg.sender, _collateral);
+
+		return offerId;
 	}
 
 	function revokeLoanOffer(uint256 _loanOfferId) external {
