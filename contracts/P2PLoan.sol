@@ -3,14 +3,22 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract P2PLoan is ERC721, Ownable {
+contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 
 	uint256 public offerId;
+	uint256 public loanId;
 	
+	enum LoanOfferState {
+		Dead, Open, Accepted
+	}
+
 	struct LoanOffer {
-		uint256 id;
-		address collateral; // ERC721 address
+		LoanOfferState state;
+		address collateral; // ERC721 token address
+		uint256 collateralId; // ERC721 token id
 		address credit; // ERC20 address
 		uint256 creditAmount;
 		uint256 creditToBePaidAmount;
@@ -23,19 +31,18 @@ contract P2PLoan is ERC721, Ownable {
 	}
 
 	struct Loan {
-		uint256 id;
 		LoanState state;
 		address borrower;
 		uint256 expiration;
-		LoanOffer acceptedOffer;
+		uint256 acceptedOfferId;
 	}
 
 	mapping(uint256 => LoanOffer) public offers;
 	mapping(uint256 => Loan) public loans;
 
-	event LoanOfferCreated(uint256 offerId, address indexed lender, address indexed collateral);
+	event LoanOfferCreated(uint256 offerId, address indexed lender, address indexed collateral, uint256 indexed collateralId);
 	event LoanOfferRevoked(uint256 offerId, address indexed lender);
-	event LoanAccepted();
+	event LoanOfferAccepted(uint256 offerId, uint256 loanId, address indexed lender, address indexed collateral, uint256 indexed collateralId);
 	event LoanPaidBack();
 
 	constructor() ERC721("P2PLoan", "2PL") Ownable() {
@@ -45,6 +52,7 @@ contract P2PLoan is ERC721, Ownable {
 
 	function createLoanOffer(
 		address _collateral,
+		uint256 _collateralId,
 		address _credit,
 		uint256 _creditAmount,
 		uint256 _creditToBePaidAmount,
@@ -53,24 +61,24 @@ contract P2PLoan is ERC721, Ownable {
 		offerId += 1;
 
 		LoanOffer memory offer = LoanOffer(
-			offerId,
+			LoanOfferState.Open,
 			_collateral,
+			_collateralId,
 			_credit,
 			_creditAmount,
 			_creditToBePaidAmount,
 			_duration,
 			msg.sender
 		);
-
 		offers[offerId] = offer;
 
-		emit LoanOfferCreated(offerId, msg.sender, _collateral);
+		emit LoanOfferCreated(offerId, msg.sender, _collateral, _collateralId);
 
 		return offerId;
 	}
 
 	function revokeLoanOffer(uint256 _offerId) external {
-		require(offers[_offerId].lender == msg.sender, "Sender is not a loan offeror");
+		require(msg.sender == offers[_offerId].lender, "Sender is not a loan offeror");
 
 		delete offers[_offerId];
 
@@ -78,14 +86,30 @@ contract P2PLoan is ERC721, Ownable {
 	}
 
 	function acceptLoanOffer(uint256 _offerId) external returns(uint256) {
-		// 1. check that sender is loan offer collateral owner
-		// 2. mint loan token for lender
-		// 3. update loan data
-		// 4. delete loan offer data
-		// 5. transfer collateral to contract
-		// 6. transfer credit to borrower
-		// 7. emit `LoanAccepted` event
-		// 8. return loan id
+		LoanOffer storage offer = offers[_offerId];
+		require(offer.state == LoanOfferState.Open, "Loan offer is not in Open state");
+		require(msg.sender == IERC721(offer.collateral).ownerOf(offer.collateralId), "Sender is not a collateral owner");
+	
+		loanId += 1;
+		Loan memory loan = Loan(
+			LoanState.Open,
+			msg.sender,
+			block.timestamp + offer.duration,
+			_offerId
+		);
+		loans[loanId] = loan;
+
+		offer.state = LoanOfferState.Accepted;
+
+		IERC721(offer.collateral).safeTransferFrom(msg.sender, address(this), offer.collateralId);
+
+		IERC20(offer.credit).transferFrom(offer.lender, msg.sender, offer.creditAmount);
+
+		_safeMint(offer.lender, loanId);
+
+		emit LoanOfferAccepted(_offerId, loanId, offer.lender, offer.collateral, offer.collateralId);
+
+		return loanId;
 	}
 
 	function payBackLoan(uint256 _loanId) external {
@@ -103,6 +127,16 @@ contract P2PLoan is ERC721, Ownable {
 		// 2.2 transfer creditToBePaidAmount to lender
 		// 3. burn loan token
 		// 4. delete loan data
+	}
+
+
+	function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) override external pure returns (bytes4) {
+		return this.onERC721Received.selector;
 	}
 
 }
