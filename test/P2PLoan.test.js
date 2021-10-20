@@ -339,4 +339,145 @@ contract("P2PLoan", async function(accounts) {
 
     });
 
+
+    describe("Claim", async function() {
+        let offerId;
+        let loanId;
+        let fakeERC721;
+        let fakeERC20;
+        const duration = 100;
+        const collateralId = 41231;
+        const creditToBePaidAmount = 122;
+
+        beforeEach(async function() {
+            fakeERC721 = await FakeERC721.new();
+            await fakeERC721.setOwnerOf(user2);
+            fakeERC20 = await FakeERC20.new();
+            const tx1 = await instance.createLoanOffer(fakeERC721.address, collateralId, fakeERC20.address, 90, creditToBePaidAmount, duration, { from: user1 });
+            offerId = tx1.logs[0].args.offerId;
+
+            const tx2 = await instance.acceptLoanOffer(offerId, { from: user2 });
+            loanId = tx2.logs[1].args.loanId;
+        });
+
+
+        it("should fail when sender is not loan token owner", async function() {
+            await instance.payBackLoan(loanId);
+
+            await expectRevert(
+                instance.claim(loanId, { from: user2 }),
+                "Sender is not loan token owner"
+            );
+        });
+
+        it("should transfer collateral when loan expired", async function() {
+            await time.increase(duration + 10);
+
+            await instance.claim(loanId, { from: user1 });
+
+            const called = await fakeERC721.safeTransferFromCalled();
+            const params = await fakeERC721.lastSafeTransferFromCallParams();
+            expect(called).to.equal(true);
+            expect(params.from).to.equal(instance.address);
+            expect(params.to).to.equal(user1);
+            expect(params.tokenId.toNumber()).to.equal(collateralId);
+        });
+
+        it("should transfer credit + interest when loan is paid back", async function() {
+            await instance.payBackLoan(loanId);
+
+            await instance.claim(loanId, { from: user1 });
+
+            const called = await fakeERC20.transferCalled();
+            const params = await fakeERC20.lastTransferCallParams();
+            expect(called).to.equal(true);
+            expect(params.recipient).to.equal(user1);
+            expect(params.amount.toNumber()).to.equal(creditToBePaidAmount);
+        });
+
+        it("should fail when loan is not expired nor paid back", async function() {
+            await expectRevert(
+                instance.claim(loanId, { from: user1 }),
+                "Loan cannot be claimed"
+            );
+        });
+
+        it("should burn loan token", async function() {
+            await instance.payBackLoan(loanId);
+
+            await instance.claim(loanId, { from: user1 });
+
+            await expectRevert(
+                instance.ownerOf(loanId),
+                "ERC721: owner query for nonexistent token"
+            );
+        });
+
+        it("should delete loan data", async function() {
+            await instance.payBackLoan(loanId);
+
+            await instance.claim(loanId, { from: user1 });
+
+            const loan = await instance.loans(loanId);
+            expect(loan.state.toNumber()).to.equal(0);
+            expect(loan.borrower).to.equal(constants.ZERO_ADDRESS);
+            expect(loan.expiration.toNumber()).to.equal(0);
+            expect(loan.acceptedOfferId.toNumber()).to.equal(0);
+        });
+
+    });
+
+
+    describe("Get loan status", async function() {
+        let offerId;
+        let loanId;
+        let fakeERC721;
+        let fakeERC20;
+        const duration = 100;
+
+        beforeEach(async function() {
+            fakeERC721 = await FakeERC721.new();
+            await fakeERC721.setOwnerOf(user2);
+            fakeERC20 = await FakeERC20.new();
+            const tx1 = await instance.createLoanOffer(fakeERC721.address, 1, fakeERC20.address, 20, 22, duration, { from: user1 });
+            offerId = tx1.logs[0].args.offerId;
+
+            const tx2 = await instance.acceptLoanOffer(offerId, { from: user2 });
+            loanId = tx2.logs[1].args.loanId;
+        });
+        
+
+        it("should return expired state when is not paid back and have passed expiration date", async function() {
+            time.increase(duration + 10);
+
+            const state = await instance.getLoanStatus(loanId);
+
+            expect(state.toNumber()).to.equal(3);
+        });
+
+        it("should return paid back state when is paid back and have passed expiration date", async function() {
+            await instance.payBackLoan(loanId, { from: user2 });
+            time.increase(duration + 10);
+
+            const state = await instance.getLoanStatus(loanId);
+
+            expect(state.toNumber()).to.equal(2);
+        });
+
+        it("should return paid back state when have not passed expiration date", async function() {
+            await instance.payBackLoan(loanId, { from: user2 });
+
+            const state = await instance.getLoanStatus(loanId);
+
+            expect(state.toNumber()).to.equal(2);
+        });
+    
+        it("should return running state when have not passed expiration date", async function() {
+            const state = await instance.getLoanStatus(loanId);
+
+            expect(state.toNumber()).to.equal(1);
+        });
+
+    });
+
 });

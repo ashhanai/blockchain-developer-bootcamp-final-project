@@ -128,13 +128,21 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 	}
 
 	function claim(uint256 _loanId) external {
-		// 1. check if sender is loan token owner
-		// 2. check if loan expired
-		// 2.1 transfer collateral to lender
-		// 2.2 transfer creditToBePaidAmount to lender
-		// 3. burn loan token
-		// 4. delete loan data
-	}
+		require(ownerOf(_loanId) == msg.sender, "Sender is not loan token owner");
+		
+		LoanOffer memory offer = offers[loans[_loanId].acceptedOfferId];
+		if (getLoanStatus(_loanId) == LoanState.Expired) {
+			IERC721(offer.collateral).safeTransferFrom(address(this), offer.lender, offer.collateralId);
+		} else if (getLoanStatus(_loanId) == LoanState.PaidBack) {
+			IERC20(offer.credit).transfer(offer.lender, offer.creditToBePaidAmount);
+		} else {
+			revert("Loan cannot be claimed");
+		}
+		
+		_burn(_loanId);
+
+		delete loans[_loanId];
+	}	
 
 
 	function onERC721Received(
