@@ -27,7 +27,7 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 	}
 
 	enum LoanState {
-		Dead, Open, Running, PaidBack, Expired
+		Dead, Running, PaidBack, Expired
 	}
 
 	struct Loan {
@@ -43,7 +43,7 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 	event LoanOfferCreated(uint256 offerId, address indexed lender, address indexed collateral, uint256 indexed collateralId);
 	event LoanOfferRevoked(uint256 offerId, address indexed lender);
 	event LoanOfferAccepted(uint256 offerId, uint256 loanId, address indexed lender, address indexed collateral, uint256 indexed collateralId);
-	event LoanPaidBack();
+	event LoanPaidBack(uint256 loanId, address indexed collateral, uint256 indexed collateralId);
 
 	constructor() ERC721("P2PLoan", "2PL") Ownable() {
 
@@ -92,7 +92,7 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 	
 		loanId += 1;
 		Loan memory loan = Loan(
-			LoanState.Open,
+			LoanState.Running,
 			msg.sender,
 			block.timestamp + offer.duration,
 			_offerId
@@ -113,11 +113,18 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 	}
 
 	function payBackLoan(uint256 _loanId) external {
-		// 1. check if loan expired
-		// 2. update loan state
-		// 3. transfer creditToBePaidAmount to contract
-		// 4. transfer collateral back to borrower
-		// 5. emit `LoanPaidBack` event
+		require(getLoanStatus(_loanId) != LoanState.Expired, "Loan is expired");
+		require(getLoanStatus(_loanId) == LoanState.Running, "Loan is not running");
+
+		Loan storage loan = loans[_loanId];
+		loan.state = LoanState.PaidBack;
+
+		LoanOffer memory offer = offers[loan.acceptedOfferId];
+		IERC20(offer.credit).transferFrom(loan.borrower, address(this), offer.creditToBePaidAmount);
+
+		IERC721(offer.collateral).safeTransferFrom(address(this), loan.borrower, offer.collateralId);
+
+		emit LoanPaidBack(_loanId, offer.collateral, offer.collateralId);
 	}
 
 	function claim(uint256 _loanId) external {
@@ -137,6 +144,15 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
         bytes calldata data
     ) override external pure returns (bytes4) {
 		return this.onERC721Received.selector;
+	}
+
+
+	function getLoanStatus(uint256 _loanId) public view returns (LoanState) {
+		if (loans[_loanId].state != LoanState.PaidBack && loans[_loanId].expiration > 0 && loans[_loanId].expiration <= block.timestamp) {
+			return LoanState.Expired;
+		} else {
+			return loans[_loanId].state;
+		}
 	}
 
 }

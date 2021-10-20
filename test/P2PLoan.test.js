@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const { BN, constants, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
+const { BN, constants, expectEvent, expectRevert, time } = require('@openzeppelin/test-helpers');
 const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 const P2PLoan = artifacts.require("P2PLoan");
 const FakeERC721 = artifacts.require("FakeERC721");
@@ -252,6 +252,91 @@ contract("P2PLoan", async function(accounts) {
 
             expect(loanId.toNumber()).to.equal(oldLoanId.toNumber() + 1);
         });
+    });
+
+
+    describe("Pay back loan", async function() {
+        let offerId;
+        let loanId;
+        let fakeERC721;
+        let fakeERC20;
+        const duration = 100;
+        const collateralId = 41231;
+        const creditToBePaidAmount = 122;
+
+        beforeEach(async function() {
+            fakeERC721 = await FakeERC721.new();
+            await fakeERC721.setOwnerOf(user2);
+            fakeERC20 = await FakeERC20.new();
+            const tx1 = await instance.createLoanOffer(fakeERC721.address, collateralId, fakeERC20.address, 90, creditToBePaidAmount, duration, { from: user1 });
+            offerId = tx1.logs[0].args.offerId;
+
+            const tx2 = await instance.acceptLoanOffer(offerId, { from: user2 });
+            loanId = tx2.logs[1].args.loanId;
+        });
+
+
+        it("should fail when loan is expired", async function() {
+            await time.increase(duration + 10);
+
+            await expectRevert(
+                instance.payBackLoan(loanId, { from: user2 }),
+                "Loan is expired"
+            );
+        });
+
+        it("should fail when loan is not running", async function() {
+            await instance.payBackLoan(loanId, { from: user2 });
+
+            await expectRevert(
+                instance.payBackLoan(loanId, { from: user2 }),
+                "Loan is not running"
+            );
+        });
+
+        it("should update loan state", async function() {
+            await instance.payBackLoan(loanId, { from: user2 });
+
+            const loan = await instance.loans(loanId);
+            expect(loan.state.toNumber()).to.equal(2);
+        });
+
+        it("should transfer credit to be paid amount to contract", async function() {
+            await instance.payBackLoan(loanId, { from: user2 });
+
+            const called = await fakeERC20.transferFromCalled();
+            const params = await fakeERC20.lastTransferFromCallParams();
+            expect(called).to.equal(true);
+            expect(params.sender).to.equal(user2);
+            expect(params.recipient).to.equal(instance.address);
+            expect(params.amount.toNumber()).to.equal(creditToBePaidAmount);
+        });
+
+        it("should transfer collateral back to borrower", async function() {
+            await instance.payBackLoan(loanId, { from: user2 });
+
+            const called = await fakeERC721.safeTransferFromCalled();
+            const params = await fakeERC721.lastSafeTransferFromCallParams();
+            expect(called).to.equal(true);
+            expect(params.from).to.equal(instance.address);
+            expect(params.to).to.equal(user2);
+            expect(params.tokenId.toNumber()).to.equal(collateralId);
+        });
+
+        it("should emit `LoanPaidBack` event", async function() {
+            const tx = await instance.payBackLoan(loanId, { from: user2 });
+
+            expectEvent(tx, "LoanPaidBack", {
+                loanId: loanId,
+                collateral: fakeERC721.address,
+                collateralId: new BN(collateralId),
+            });
+        });
+
+        it("should be able to pay back from any account", async function() {
+            await instance.payBackLoan(loanId, { from: owner });
+        });
+
     });
 
 });
