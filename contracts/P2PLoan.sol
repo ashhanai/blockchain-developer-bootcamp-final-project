@@ -132,9 +132,9 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 		
 		LoanOffer memory offer = offers[loans[_loanId].acceptedOfferId];
 		if (getLoanStatus(_loanId) == LoanState.Expired) {
-			IERC721(offer.collateral).safeTransferFrom(address(this), offer.lender, offer.collateralId);
+			IERC721(offer.collateral).safeTransferFrom(address(this), msg.sender, offer.collateralId);
 		} else if (getLoanStatus(_loanId) == LoanState.PaidBack) {
-			IERC20(offer.credit).transfer(offer.lender, offer.creditToBePaidAmount);
+			IERC20(offer.credit).transfer(msg.sender, offer.creditToBePaidAmount);
 		} else {
 			revert("Loan cannot be claimed");
 		}
