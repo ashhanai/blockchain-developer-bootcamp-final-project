@@ -12,4 +12,9 @@ contract ERC20Faucet is ERC20 {
         return true;
     }
 
+    function give(address _owner, uint256 _amount) external returns(bool) {
+        _mint(_owner, _amount);
+        return true;
+    }
+
 }

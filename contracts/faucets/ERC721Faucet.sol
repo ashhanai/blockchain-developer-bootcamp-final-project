@@ -15,4 +15,24 @@ contract ERC721Faucet is ERC721 {
         return tokenId;
     }
 
+    function give(address _owner) external returns(uint256) {
+        tokenId += 1;
+        _safeMint(_owner, tokenId);
+        return tokenId;
+    }
+
+    function getNFTList(address _owner) external view returns (uint256[] memory) {
+        uint256[] memory list = new uint256[](tokenId);
+        if (tokenId == 0) {
+            return list;
+        }
+
+        for (uint256 i = 1; i <= tokenId; i++) {
+            if (ownerOf(i) == _owner) {
+                list[i - 1] = i;
+            }
+        }
+
+        return list;
+    }
 }

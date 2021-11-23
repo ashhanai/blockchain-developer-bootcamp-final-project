@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract P2PLoan is ERC721, IERC721Receiver, Ownable {
+contract P2PLoan is ERC721, IERC721Receiver {
 
 	uint256 public offerId;
 	uint256 public loanId;
@@ -16,6 +17,7 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 	}
 
 	struct LoanOffer {
+		uint256 id;
 		LoanOfferState state;
 		address collateral; // ERC721 token address
 		uint256 collateralId; // ERC721 token id
@@ -31,6 +33,7 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 	}
 
 	struct Loan {
+		uint256 id;
 		LoanState state;
 		address borrower;
 		uint256 expiration;
@@ -45,7 +48,7 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 	event LoanOfferAccepted(uint256 offerId, uint256 loanId, address indexed lender, address indexed collateral, uint256 indexed collateralId);
 	event LoanPaidBack(uint256 loanId, address indexed collateral, uint256 indexed collateralId);
 
-	constructor() ERC721("P2PLoan", "2PL") Ownable() {
+	constructor() ERC721("P2PLoan", "2PL") {
 
 	}
 
@@ -61,6 +64,7 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 		offerId += 1;
 
 		LoanOffer memory offer = LoanOffer(
+			offerId,
 			LoanOfferState.Open,
 			_collateral,
 			_collateralId,
@@ -92,6 +96,7 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 	
 		loanId += 1;
 		Loan memory loan = Loan(
+			loanId,
 			LoanState.Running,
 			msg.sender,
 			block.timestamp + offer.duration,
@@ -161,6 +166,38 @@ contract P2PLoan is ERC721, IERC721Receiver, Ownable {
 		} else {
 			return loans[_loanId].state;
 		}
+	}
+
+	function getOfferList() external view returns (LoanOffer[] memory) {
+		LoanOffer[] memory offerList = new LoanOffer[](offerId);
+		if (offerId == 0) {
+			return offerList;
+		}
+
+		for (uint256 i = 1; i <= offerId; i++) {
+			offerList[i - 1] = offers[i];
+		}
+		return offerList;
+	}
+
+	function getLoanList() external view returns (Loan[] memory) {
+		Loan[] memory loanList = new Loan[](loanId);
+		if (loanId == 0) {
+			return loanList;
+		}
+
+		for (uint256 i = 1; i <= loanId; i++) {
+			loanList[i - 1] = loans[i];
+			loanList[i - 1].state = getLoanStatus(i);
+		}
+		return loanList;
+	}
+
+
+	function supportsInterface(bytes4 interfaceId) override public view returns (bool) {
+		return interfaceId == type(IERC165).interfaceId
+			|| interfaceId == type(IERC721).interfaceId
+			|| interfaceId == type(IERC721Receiver).interfaceId;
 	}
 
 }
