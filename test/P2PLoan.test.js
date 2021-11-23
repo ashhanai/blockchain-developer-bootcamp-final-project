@@ -16,13 +16,6 @@ contract("P2PLoan", async function(accounts) {
 
 
     describe("Constructor", function() {
-    
-        it("should set owner", async function() {
-            instance = await P2PLoan.new({ from: user1 });
-
-            const instanceOwner = await instance.owner();
-            expect(instanceOwner).to.equal(user1);
-        });
 
         it("should set proper name", async function() {
             const name = await instance.name();
@@ -58,6 +51,7 @@ contract("P2PLoan", async function(accounts) {
             const offerId = tx.logs[0].args.offerId;
 
             const offer = await instance.offers(offerId, { from: user1 });
+            expect(offer.id.toNumber()).to.equal(offerId.toNumber());
             expect(offer.state.toNumber()).to.equal(1);
             expect(offer.collateral).to.equal(asset1);
             expect(offer.collateralId.toNumber()).to.equal(collateralId);
@@ -111,6 +105,7 @@ contract("P2PLoan", async function(accounts) {
             await instance.revokeLoanOffer(offerId, { from: user1 });
 
             const offer = await instance.offers(offerId);
+            expect(offer.id.toNumber()).to.equal(0);
             expect(offer.state.toNumber()).to.equal(0);
             expect(offer.collateral).to.equal(constants.ZERO_ADDRESS);
             expect(offer.collateralId.toNumber()).to.equal(0);
@@ -183,6 +178,7 @@ contract("P2PLoan", async function(accounts) {
             const block = await web3.eth.getBlock(lastBlockNumber);
             const blockTimestamp = block.timestamp;
             const loan = await instance.loans(loanId);
+            expect(loan.id.toNumber()).to.equal(loanId.toNumber());
             expect(loan.state.toNumber()).to.equal(1);
             expect(loan.borrower).to.equal(user2);
             expect(loan.expiration.toNumber()).to.equal(blockTimestamp + duration);
@@ -419,6 +415,7 @@ contract("P2PLoan", async function(accounts) {
             await instance.claim(loanId, { from: user1 });
 
             const loan = await instance.loans(loanId);
+            expect(loan.id.toNumber()).to.equal(0);
             expect(loan.state.toNumber()).to.equal(0);
             expect(loan.borrower).to.equal(constants.ZERO_ADDRESS);
             expect(loan.expiration.toNumber()).to.equal(0);
