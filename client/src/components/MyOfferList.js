@@ -14,12 +14,12 @@ const MyOfferList = () => {
 	const { active, account } = useWeb3React();
 	const { lastTxnHash } = useAppContext();
 
-	const [collAddr, setCollAddr] = useState("0xd8e80c411211eDf097ad8900D09D121ba957A63A");
-	const [collId, setCollId] = useState(1);
-	const [creditAddr, setCreditAddr] = useState("0x6169F93B04A523f2a26d4FDF6bD620FdE3F51Db7");
-	const [creditAmount, setCreditAmount] = useState(10);
-	const [creditToBePaidAmount, setCreditToBePaidAmount] = useState(11);
-	const [duration, setDuration] = useState(86400);
+	const [collAddr, setCollAddr] = useState("");
+	const [collId, setCollId] = useState();
+	const [creditAddr, setCreditAddr] = useState("");
+	const [creditAmount, setCreditAmount] = useState();
+	const [creditToBePaidAmount, setCreditToBePaidAmount] = useState();
+	const [duration, setDuration] = useState();
 	const decimals = BigNumber.from(10).pow(18);
 
 	useEffect(() => {
