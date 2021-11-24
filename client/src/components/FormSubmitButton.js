@@ -20,7 +20,7 @@ const FormSubmitButton = ({creditAddr, creditAmount, onSubmit}) => {
   	}, [account, active, creditAddr, creditAmount, lastTxnHash]);
 
 	async function fetchAllowance() {
-		if (isAddress(creditAddr) && account != null) {
+		if (creditAmount && isAddress(creditAddr) && account != null) {
 			const allowanceValue = await contract(creditAddr).allowance(account, P2PLoanAddress);
 
 			if (allowanceValue.lt(decimals.mul(creditAmount))) {
