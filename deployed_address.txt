@@ -1,4 +1,4 @@
-Testnet: Rikeby
+Testnet: Rinkeby
 
 Addresses:
  - P2PLoan: 0x029Abdf94998006e72A7DaaBB7D18945f9764368
