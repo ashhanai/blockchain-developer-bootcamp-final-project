@@ -1,7 +1,7 @@
 {
   "name": "blockchain-developer-bootcamp-final-project-client",
   "version": "0.1.0",
-  "homepage": "https://ashhanai.github.io/blockchain-developer-bootcamp-final-project/client/public/",
+  "homepage": "https://ashhanai.github.io/blockchain-developer-bootcamp-final-project/",
   "dependencies": {
     "@ethersproject/address": "^5.5.0",
     "@ethersproject/contracts": "^5.5.0",
