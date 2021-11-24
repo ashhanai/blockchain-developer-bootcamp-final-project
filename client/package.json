@@ -1,7 +1,6 @@
 {
   "name": "blockchain-developer-bootcamp-final-project-client",
   "version": "0.1.0",
-  "private": true,
   "dependencies": {
     "@ethersproject/address": "^5.5.0",
     "@ethersproject/contracts": "^5.5.0",
