@@ -27,7 +27,7 @@ const ConnectButton = () => {
 	}
 
 	if (typeof window.ethereum === 'undefined') {
-  		return (
+		return (
 			<Card className="d-flex flex-row justify-content-between" style={{ width: 350 }}>
 				<Card.Text className="m-2">Metamask not installed</Card.Text>
 				<Button onClick={onActivate} disabled>Connect</Button>
