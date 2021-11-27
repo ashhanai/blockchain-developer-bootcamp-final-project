@@ -2,7 +2,8 @@
   "name": "blockchain-developer-bootcamp-final-project",
   "version": "1.0.0",
   "scripts": {
-    "test": "npx truffle test"
+    "test": "npx truffle test",
+    "console": "npx truffle console --network development"
   },
   "devDependencies": {
     "@openzeppelin/contracts": "4.3.2",

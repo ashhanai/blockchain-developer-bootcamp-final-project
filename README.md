@@ -50,16 +50,17 @@ https://youtu.be/fFA3Dh5JnhY
 6. all set 🥳
 
 ### Contract unit tests
-1. from project root dir run tests on test network `npm test`, it will compile contracts and run unit tests
+1. open terminal and run `ganache-cli -p 8545`
+2. open another terminal window and from project root dir run tests `npm run test`, it will compile contracts and run unit tests
 
 ### Contract interaction
-1. open terminal and run `ganache-cli -p 8545`
-2. open another terminal window and from project root dir open truffle console `npx truffle console --network development`, it will open console connected to your local ganache
+1. open terminal and run `ganache-cli -p 8545` (don't need to do that if you already have running ganache on port `8545`)
+2. open another terminal window and from project root dir open truffle console `npm run console`, it will open console connected to your local ganache
 3. in console run `migrate` to compile and migrate P2PLoan, ERC20Faucet & ERC721Faucet contracts
 4. all contracts are deployed and you are ready to interact with them
 
 ### UI interaction
-UI is using opensea API, which would not work if connected to local blockchain. Because of that, UI is by default connected to Rinkeby testnet and you can run it locally by running `npm start` in client directory. All contracts are already deployed to Rinkeby testnet so you don't need to worry about that. 
+UI is using opensea API, which would not work if connected to local blockchain. Because of that, UI is by default connected to Rinkeby testnet and you can run it locally by running `npm run start` in client directory. All contracts are already deployed to Rinkeby testnet so you don't need to worry about that. 
 
 ## Public Ethereum wallet for certification
 ashhanai.eth - `0x8ea42a3334E2AaB7d144990FDa6afE67a85E2a5c`
