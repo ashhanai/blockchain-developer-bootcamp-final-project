@@ -2,6 +2,7 @@
   "name": "blockchain-developer-bootcamp-final-project",
   "version": "1.0.0",
   "scripts": {
+    "ganache": "npx ganache-cli -p 8545",
     "test": "npx truffle test",
     "console": "npx truffle console --network development"
   },

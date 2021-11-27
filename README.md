@@ -50,11 +50,11 @@ https://youtu.be/fFA3Dh5JnhY
 6. all set 🥳
 
 ### Contract unit tests
-1. open terminal and run `ganache-cli -p 8545`
+1. open terminal and run `npm run ganache`, it will start up a new ganache cli at port `8545`
 2. open another terminal window and from project root dir run tests `npm run test`, it will compile contracts and run unit tests
 
 ### Contract interaction
-1. open terminal and run `ganache-cli -p 8545` (don't need to do that if you already have running ganache on port `8545`)
+1. open terminal and run `npm run ganache` (don't need to do that if you already have running ganache at port `8545`)
 2. open another terminal window and from project root dir open truffle console `npm run console`, it will open console connected to your local ganache
 3. in console run `migrate` to compile and migrate P2PLoan, ERC20Faucet & ERC721Faucet contracts
 4. all contracts are deployed and you are ready to interact with them
